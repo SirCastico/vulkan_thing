@@ -13,4 +13,4 @@ if(TARGET SDL2::SDL2main)
     target_link_libraries(test PRIVATE SDL2::SDL2main)
 endif()
 
-target_link_libraries(test PRIVATE SDL2::SDL2 Vulkan::Vulkan)
+target_link_libraries(test PRIVATE glm::glm SDL2::SDL2 Vulkan::Vulkan VulkanMemoryAllocator )
