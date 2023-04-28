@@ -3,12 +3,12 @@
 
 #include <cstdio>
 #include <array>
+#include <stdexcept>
 #include <vector>
 #include <chrono>
 #include <thread>
 #include <optional>
 
-#define VULKAN_HPP_NO_EXCEPTIONS
 #include <vulkan/vulkan.hpp>
 
 class Engine{
@@ -50,7 +50,7 @@ public:
 private:
 
     bool checkValidationLayerSupport() {
-        auto[result, availableLayers] = vk::enumerateInstanceLayerProperties();
+        auto availableLayers = vk::enumerateInstanceLayerProperties();
 
         for(const char *layerName : validationLayers) {
             bool layerFound = false;
@@ -73,13 +73,11 @@ private:
         uint32_t pCount=0;
         SDL_Vulkan_GetInstanceExtensions(_window, &pCount, nullptr);
         std::vector<const char*> extensions(pCount);    
-        printf("yo\n");
         SDL_Vulkan_GetInstanceExtensions(_window, &pCount, extensions.data());
 
         for(const char *extension : extensions){
             printf("Extension: %s\n", extension);
         }
-        printf("yo\n");
 
         return extensions;
 
@@ -106,8 +104,7 @@ private:
 
     std::optional<vk::PhysicalDevice> getSuitablePhysicalDevice(){
         // enumerate the physicalDevices
-        auto [presult, physicalDevices] = _instance.enumeratePhysicalDevices();
-        vk::resultCheck(presult, "Error on enumerate physical devices");
+        auto physicalDevices = _instance.enumeratePhysicalDevices();
 
         std::optional<vk::PhysicalDevice> descDev = std::nullopt, intDev = std::nullopt;
 
@@ -139,23 +136,15 @@ private:
         int i = 0;
 
         for(const auto& queueFamily : qfps){
-            if(queueFamily.queueFlags & vk::QueueFlagBits::eCompute)
-                indices.computeFamily = i;
-
-            else if(queueFamily.queueFlags & vk::QueueFlagBits::eGraphics)
-                indices.graphicsFamily = i;
-
-            else if(queueFamily.queueFlags & vk::QueueFlagBits::eTransfer)
-                indices.transferFamily = i;
+            if(queueFamily.queueFlags & vk::QueueFlagBits::eGraphics)
+                indices.graphicsFamily = std::optional(i);
         }
         return indices;
     }
 
     void initVulkan(){
-        if(enableValidationLayers && !checkValidationLayerSupport()){
-            printf("Validation not suported\n");
-            abort();
-        }
+        if(enableValidationLayers && !checkValidationLayerSupport())
+            throw std::runtime_error("Validation not suported");
 
         std::vector<const char*> extensions = getRequiredExtensions();        
 
@@ -174,37 +163,24 @@ private:
 
 
         // create an Instance
-        auto resultValue = vk::createInstance( instanceCreateInfo );
-        vk::resultCheck(resultValue.result, "Failed to create Vulkan Instance");
-        _instance = resultValue.value;
+        _instance = vk::createInstance( instanceCreateInfo );
 
         {
             VkSurfaceKHR surf;
-            if(!SDL_Vulkan_CreateSurface(_window, _instance, &surf)){
-
-            }
+            if(!SDL_Vulkan_CreateSurface(_window, _instance, &surf))
+                throw std::runtime_error("Failed to create Surface");
             _surface = surf;
         }
 
-        // vk::DebugUtilsMessengerCreateInfoEXT debugMessInfo;
-
-        //auto [dresult, debugUtilsMessenger] = instance.createDebugUtilsMessengerEXT( debugMessInfo );
-        //vk::resultCheck(dresult, "Failed to create debugUtilsMessenger");  
-
-
         auto optPhysicalDevice = getSuitablePhysicalDevice();
-        if(!optPhysicalDevice.has_value()){
-            printf("no suitable device found\n");
-            abort();
-        }
+        if(!optPhysicalDevice.has_value())
+            throw std::runtime_error("no suitable device found");
 
         _physicalDevice = optPhysicalDevice.value();
 
         QueueFamilyIndices inds = findQueueFamilies(_physicalDevice);
-        if(!inds.graphicsFamily.has_value()){
-            printf("found no graphics queue\n");
-            abort();
-        }
+        if(!inds.graphicsFamily.has_value())
+            throw std::runtime_error("found no graphics queue");
 
         // Create device
         float queuePriority = 1.0f;
@@ -220,10 +196,7 @@ private:
             deviceQueueCreateInfo
         );
 
-        auto devResultValue = _physicalDevice.createDevice(deviceCreateInfo);
-
-        vk::resultCheck(devResultValue.result, "failed to create device");
-        _device = devResultValue.value;
+        _device = _physicalDevice.createDevice(deviceCreateInfo);
 
         _graphicsQueue = _device.getQueue(inds.graphicsFamily.value(),0);
 
