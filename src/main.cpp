@@ -81,7 +81,6 @@ public:
     ~Renderer(){
         for(int i=0;i<_frameBuffers.size();++i){
             _device.destroyFramebuffer(_frameBuffers[i]);
-            _device.destroyImageView(_swapchainImageViews[i]);
         }
         _device.destroyRenderPass(_renderPass);
         _device.destroyCommandPool(_commandPool);
@@ -350,9 +349,9 @@ private:
             swapChainCreateInfo.pQueueFamilyIndices   = queueFamilyIndices;
         }
 
-        vk::SwapchainKHR swapChain = _device.createSwapchainKHR( swapChainCreateInfo );
+        _swapchain = _device.createSwapchainKHR( swapChainCreateInfo );
 
-        _swapchainImages = _device.getSwapchainImagesKHR( swapChain );
+        _swapchainImages = _device.getSwapchainImagesKHR( _swapchain );
 
         _swapchainImageViews.reserve( _swapchainImages.size() );
         vk::ImageViewCreateInfo imageViewCreateInfo(
