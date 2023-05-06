@@ -5,7 +5,7 @@ cmake_minimum_required (VERSION 3.8)
 
 find_package(Vulkan REQUIRED)
 
-add_executable(test main.cpp)
+add_executable(test main.cpp renderer.cpp)
 
 # SDL2::SDL2main may or may not be available. It is e.g. required by Windows GUI applications
 if(TARGET SDL2::SDL2main)
